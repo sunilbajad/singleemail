@@ -24,6 +24,10 @@ const transporter = nodemailer.createTransport({
 // Set up Multer for handling file uploads
 const upload = multer({ dest: "uploads/" });
 
+app.get('/', (req, res) => {
+    res.send('hello')
+})
+
 // Serve the 'qrcodes' directory as static files
 app.use(express.static("qrcodes"));
 
