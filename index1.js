@@ -1,6 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const QRCode = require("qrcode");
+const qrcodeLogo = require('qrcode-logo');
 const nodemailer = require("nodemailer");
 const fs = require("fs");
 const cors = require("cors");
@@ -9,8 +10,6 @@ require("dotenv").config();
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-
 
 // Nodemailer configuration
 const transporter = nodemailer.createTransport({
@@ -27,18 +26,18 @@ const upload = multer({ dest: "uploads/" });
 // Serve the 'qrcodes' directory as static files
 app.use(express.static("qrcodes"));
 
-// Route to serve the frontend
+// Serve the 'public' directory as static files
 app.use(express.static("public"));
 
 // Route to handle registration
 app.post("/register", upload.none(), async (req, res) => {
     try {
-        const { name, email, mobile, noticket } = req.body;
+        const { name, email, mobile } = req.body;
 
-        // Generate QR code based on user information
-        const qrcodeData = JSON.stringify({ name, email, mobile, noticket });
+        // Generate QR code with logo based on user information
+        const qrcodeData = JSON.stringify({ name, email, mobile });
         const qrcodeFilename = `${name}-${Date.now()}`;
-        const qrcodePath = await generateQRCode(qrcodeData, qrcodeFilename);
+        const qrcodePath = await generateQRCodeWithLogo(qrcodeData, qrcodeFilename);
 
         if (!qrcodePath) {
             return res.status(500).json({ error: "Error generating QR code" });
@@ -367,16 +366,31 @@ background-image: linear-gradient(0deg, rgba(235, 192, 72, 1),rgba(255, 255, 255
     }
 });
 
-// Function to generate and save QR code images
-const generateQRCode = async (qrcodeData, filename) => {
+// Function to generate QR Code with a logo using qrcode and qrcode-logo
+async function generateQRCodeWithLogo(content, filename) {
     try {
-        await QRCode.toFile(`./qrcodes/${filename}.png`, qrcodeData);
-        return `./qrcodes/${filename}.png`;
-    } catch (err) {
-        console.error("Error generating QR code:", err);
-        return null;
+        // Generate QR Code as a data URI
+        const dataURI = await QRCode.toDataURL(content);
+
+        // Create a qrcode-logo instance
+        const qrWithLogo = new qrcodeLogo();
+
+        // Configure the logo (replace 'path-to-logo' with the actual path to your logo image)
+        qrWithLogo.logo('path-to-logo', { width: 20, height: 20 });
+
+        // Create the QR Code with a logo
+        const qrCodeImage = await qrWithLogo.create(dataURI);
+
+        // Save the QR Code image to a file
+        const qrcodePath = `./qrcodes/${filename}.png`;
+        fs.writeFileSync(qrcodePath, qrCodeImage);
+
+        return qrcodePath;
+    } catch (error) {
+        console.error('Error generating QR Code with logo:', error);
+        throw error;
     }
-};
+}
 
 // Start the server
 const PORT = 3000;
